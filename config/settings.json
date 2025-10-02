@@ -69,14 +69,12 @@
     },
     "extensions": {},
     "modules": {
-        "tidal": {
-            "tv_atmos_token": "4N3n6Q1x95LL5K7p",
-            "tv_atmos_secret": "oKOXfJW371cX6xaZ0PyhgGNBdNLlBZd4AKKYougMjik=",
-            "mobile_atmos_hires_token": "km8T1xS355y7dd3H",
-            "mobile_hires_token": "6BDSRdpK9hqEBTgU",
-            "enable_mobile": true,
-            "prefer_ac4": false,
-            "fix_mqa": true
+        "qobuz": {
+            "app_id": "579939560",
+            "app_secret": "fa31fc13e7a28e7d70bb61e91aa9e178",
+            "quality_format": "{sample_rate}kHz {bit_depth}bit",
+            "username": "a1sttj6wmq@mituni.edu.pl",
+            "password": "x1De9ts4lX"
         },
         "deezer": {
             "client_id": "447462",
@@ -85,12 +83,14 @@
             "email": "pnh65@6po.net",
             "password": "Lostlove@654"
         },
-        "qobuz": {
-            "app_id": "579939560",
-            "app_secret": "fa31fc13e7a28e7d70bb61e91aa9e178",
-            "quality_format": "{sample_rate}kHz {bit_depth}bit",
-            "username": "a1sttj6wmq@mituni.edu.pl",
-            "password": "x1De9ts4lX"
+        "tidal": {
+            "tv_atmos_token": "4N3n6Q1x95LL5K7p",
+            "tv_atmos_secret": "oKOXfJW371cX6xaZ0PyhgGNBdNLlBZd4AKKYougMjik=",
+            "mobile_atmos_hires_token": "km8T1xS355y7dd3H",
+            "mobile_hires_token": "6BDSRdpK9hqEBTgU",
+            "enable_mobile": true,
+            "prefer_ac4": false,
+            "fix_mqa": true
         }
     }
 }

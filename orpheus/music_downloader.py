@@ -627,18 +627,15 @@ class Downloader:
                 track_info.tags.md5_hash = md5_hash
                 self.print(f'MD5: {md5_hash}')
                 
-                # For FLAC files, also calculate and set the MD5 of unencoded content
+                # For FLAC files, also fix the MD5 signature of unencoded content
                 if container == ContainerEnum.flac:
-                    self.print('Calculating MD5 of unencoded content')
+                    self.print('Fixing FLAC MD5 signature')
                     try:
-                        from utils.utils import calculate_unencoded_md5, set_flac_md5_signature
-                        unencoded_md5 = calculate_unencoded_md5(track_location)
-                        if set_flac_md5_signature(track_location, unencoded_md5):
-                            self.print(f'Unencoded MD5: {unencoded_md5}')
-                        else:
-                            self.print('Warning: Could not set FLAC MD5 signature')
+                        from utils.utils import fix_flac_md5_signature
+                        unencoded_md5 = fix_flac_md5_signature(track_location)
+                        self.print(f'Unencoded MD5: {unencoded_md5}')
                     except Exception as e:
-                        self.print(f'Warning: Could not calculate unencoded MD5: {e}')
+                        self.print(f'Warning: Could not fix FLAC MD5 signature: {e}')
                         
             except Exception as e:
                 self.print(f'Warning: Could not calculate MD5 hash: {e}')
@@ -680,14 +677,14 @@ class Downloader:
                             error=track_info.error
                         )
                         
-                        # For FLAC files, also set the MD5 of unencoded content for the original file
+                        # For FLAC files, also fix the MD5 signature for the original file
                         if old_container == ContainerEnum.flac:
                             try:
-                                from utils.utils import calculate_unencoded_md5, set_flac_md5_signature
-                                old_unencoded_md5 = calculate_unencoded_md5(old_track_location)
-                                set_flac_md5_signature(old_track_location, old_unencoded_md5)
+                                from utils.utils import fix_flac_md5_signature
+                                old_unencoded_md5 = fix_flac_md5_signature(old_track_location)
+                                self.print(f'Original file unencoded MD5: {old_unencoded_md5}')
                             except Exception as e:
-                                self.print(f'Warning: Could not set unencoded MD5 for original file: {e}')
+                                self.print(f'Warning: Could not fix FLAC MD5 signature for original file: {e}')
                         
                         tag_file(old_track_location, cover_temp_location if self.global_settings['covers']['embed_cover'] else None,
                                  old_track_info, credits_list, embedded_lyrics, old_container)

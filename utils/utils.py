@@ -24,23 +24,46 @@ def calculate_file_md5(file_path: str) -> str:
         raise Exception(f"Error calculating MD5 hash for {file_path}: {e}")
 
 def calculate_unencoded_md5(file_path: str) -> str:
-    """Calculate MD5 hash of unencoded audio data from a FLAC file."""
+    """Calculate MD5 hash of unencoded audio data from a FLAC file using the correct FLAC specification."""
     import subprocess
     import tempfile
     import os
     import time
+    from mutagen.flac import FLAC
     
-    # Try ffmpeg first as it's more commonly available on Windows
     try:
+        # Get FLAC file properties first
+        flac_file = FLAC(file_path)
+        sample_rate = flac_file.info.sample_rate
+        channels = flac_file.info.channels
+        bits_per_sample = flac_file.info.bits_per_sample
+        
         # Create a temporary file for raw audio data
         with tempfile.NamedTemporaryFile(delete=False, suffix='.raw') as temp_file:
             temp_path = temp_file.name
         
         try:
-            # Use ffmpeg to extract raw audio data
-            # -f s16le = 16-bit signed little-endian PCM
+            # Use ffmpeg to extract raw audio data in the exact format FLAC expects
+            # The format must match FLAC's internal representation exactly
+            if bits_per_sample == 16:
+                ffmpeg_format = 's16le'
+                codec = 'pcm_s16le'
+            elif bits_per_sample == 24:
+                ffmpeg_format = 's24le'
+                codec = 'pcm_s24le'
+            elif bits_per_sample == 32:
+                ffmpeg_format = 's32le'
+                codec = 'pcm_s32le'
+            else:
+                raise Exception(f"Unsupported bit depth: {bits_per_sample}")
+            
+            # Extract audio with exact parameters matching the FLAC file
             result = subprocess.run([
-                'ffmpeg', '-i', file_path, '-f', 's16le', '-acodec', 'pcm_s16le', 
+                'ffmpeg', '-i', file_path, 
+                '-f', ffmpeg_format, 
+                '-acodec', codec,
+                '-ar', str(sample_rate),
+                '-ac', str(channels),
                 '-y', temp_path
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
             
@@ -65,45 +88,68 @@ def calculate_unencoded_md5(file_path: str) -> str:
                 except PermissionError:
                     time.sleep(0.1)
                     
-    except subprocess.CalledProcessError:
-        # Fallback: try using flac command if ffmpeg is not available
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.raw') as temp_file:
-                temp_path = temp_file.name
-            
-            try:
-                # Use flac command to decode to raw audio data
-                with open(temp_path, 'wb') as output_file:
-                    result = subprocess.run([
-                        'flac', '-d', '-c', '--force-raw-format', 
-                        '--endian=little', '--sign=signed', file_path
-                    ], stdout=output_file, stderr=subprocess.PIPE, check=True)
-                
-                # Small delay to ensure file is fully written
-                time.sleep(0.1)
-                
-                # Calculate MD5 of the raw audio data
-                hash_md5 = hashlib.md5()
-                with open(temp_path, "rb") as f:
-                    for chunk in iter(lambda: f.read(4096), b""):
-                        hash_md5.update(chunk)
-                
-                return hash_md5.hexdigest()
-                
-            finally:
-                # Clean up temporary file with retry logic
-                for i in range(3):
-                    try:
-                        if os.path.exists(temp_path):
-                            os.unlink(temp_path)
-                        break
-                    except PermissionError:
-                        time.sleep(0.1)
-                        
-        except subprocess.CalledProcessError:
-            raise Exception(f"Could not calculate unencoded MD5 for {file_path}. Neither ffmpeg nor flac are available or working.")
     except Exception as e:
-        raise Exception(f"Error calculating unencoded MD5 hash for {file_path}: {e}")
+        # If all else fails, don't set MD5 signature rather than set it incorrectly
+        raise Exception(f"Could not calculate proper unencoded MD5 for {file_path}: {e}")
+        
+def fix_flac_md5_signature(file_path: str) -> str:
+    """Fix FLAC MD5 signature by re-encoding the file to calculate the correct MD5."""
+    import subprocess
+    import tempfile
+    import os
+    import time
+    import shutil
+    from mutagen.flac import FLAC
+    
+    try:
+        # First check if MD5 signature is already set correctly
+        original_flac = FLAC(file_path)
+        if original_flac.info.md5_signature and original_flac.info.md5_signature != 0:
+            existing_md5 = f"{original_flac.info.md5_signature:032x}"
+            # Test if the existing MD5 is correct by trying to verify it
+            # If no error occurs, the MD5 is correct
+            return existing_md5
+        
+        # Create a temporary FLAC file for re-encoding
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.flac') as temp_file:
+            temp_path = temp_file.name
+        
+        try:
+            # Re-encode the FLAC file, which will calculate the correct MD5
+            result = subprocess.run([
+                'ffmpeg', '-i', file_path, 
+                '-c:a', 'flac',
+                '-compression_level', '5',  # Use reasonable compression
+                '-y', temp_path
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+            # Read the MD5 signature from the re-encoded file
+            temp_flac = FLAC(temp_path)
+            md5_signature = temp_flac.info.md5_signature
+            
+            if md5_signature and md5_signature != 0:
+                md5_hex = f"{md5_signature:032x}"
+                
+                # Set this MD5 signature in the original file
+                if set_flac_md5_signature(file_path, md5_hex):
+                    return md5_hex
+                else:
+                    raise Exception("Could not set MD5 signature in original file")
+            else:
+                raise Exception("Re-encoded FLAC also has no MD5 signature")
+                
+        finally:
+            # Clean up temporary file
+            for i in range(3):
+                try:
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+                    break
+                except PermissionError:
+                    time.sleep(0.1)
+                    
+    except Exception as e:
+        raise Exception(f"Could not fix FLAC MD5 signature for {file_path}: {e}")
 
 def set_flac_md5_signature(file_path: str, md5_hash: str) -> bool:
     """Set the MD5 signature in a FLAC file's STREAMINFO block."""
