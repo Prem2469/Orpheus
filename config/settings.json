@@ -69,19 +69,19 @@
     },
     "extensions": {},
     "modules": {
+        "deezer": {
+            "client_id": "447462",
+            "client_secret": "a83bf7f38ad2f137e444727cfc3775cf",
+            "bf_secret": "g4el58wc0zvf9na1",
+            "email": "pnh65@6po.net",
+            "password": "Deezer@654"
+        },
         "qobuz": {
             "app_id": "579939560",
             "app_secret": "fa31fc13e7a28e7d70bb61e91aa9e178",
             "quality_format": "{sample_rate}kHz {bit_depth}bit",
             "username": "a1sttj6wmq@mituni.edu.pl",
             "password": "x1De9ts4lX"
-        },
-        "deezer": {
-            "client_id": "447462",
-            "client_secret": "a83bf7f38ad2f137e444727cfc3775cf",
-            "bf_secret": "g4el58wc0zvf9na1",
-            "email": "pnh65@6po.net",
-            "password": "Lostlove@654"
         },
         "tidal": {
             "tv_atmos_token": "4N3n6Q1x95LL5K7p",
